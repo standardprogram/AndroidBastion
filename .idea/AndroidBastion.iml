@@ -24,5 +24,6 @@
     <orderEntry type="jdk" jdkName="Android API 23 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="unity-classes" level="project" />
+    <orderEntry type="library" name="AMap_Location_v2.3.0_20160112" level="project" />
   </component>
 </module>
