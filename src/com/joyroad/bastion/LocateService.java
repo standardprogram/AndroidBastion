@@ -9,6 +9,10 @@ import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationClientOption;
 import com.amap.api.location.AMapLocationListener;
+import com.unity3d.player.UnityPlayer;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -18,41 +22,71 @@ import java.util.Date;
  */
 public class LocateService extends Service {
 
+    private static final String TAG = "LocateService";
+
+    private final int FAST_INTERVAL = 15 * 1000;
+    private final int SLOW_INTERVAL = 3 * 60 * 1000;
+
     public AMapLocationClient mLocationClient = null;
     public AMapLocationListener mLocationListener;
 
 
     @Override
     public IBinder onBind(Intent intent) {
+        Log.d(TAG, "onBind");
+        SetLocateInterval(FAST_INTERVAL);
         return null;
     }
 
     @Override
+    public boolean onUnbind(Intent intent) {
+        Log.d(TAG, "onUnbind");
+        SetLocateInterval(SLOW_INTERVAL);
+        return super.onUnbind(intent);
+    }
+
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+
+        Log.d(TAG, "onStartCommand");
+
+
+        return Service.START_STICKY;
+    }
+
+    @Override
     public void onCreate() {
+
+        Log.e(TAG, "onCreate");
         super.onCreate();
 
-        mLocationListener = new AMapLocationListener() {
+        mLocationClient = new AMapLocationClient(this);
+        mLocationListener = new LocationListener();
+        mLocationClient.setLocationListener(mLocationListener);
+        SetLocateInterval(SLOW_INTERVAL);
+        mLocationClient.startLocation();
+    }
+
+    private class LocationListener implements AMapLocationListener{
             @Override
             public void onLocationChanged(AMapLocation aMapLocation) {
                 if (aMapLocation != null) {
                     if (aMapLocation.getErrorCode() == 0) {
                         //定位成功回调信息，设置相关消息
-                        aMapLocation.getLocationType();//获取当前定位结果来源，如网络定位结果，详见定位类型表
-                        aMapLocation.getLatitude();//获取纬度
-                        aMapLocation.getLongitude();//获取经度
-                        aMapLocation.getAccuracy();//获取精度信息
-                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                        Date date = new Date(aMapLocation.getTime());
-                        df.format(date);//定位时间
-                        aMapLocation.getAddress();//地址，如果option中设置isNeedAddress为false，则没有此结果，网络定位结果中会有地址信息，GPS定位不返回地址信息。
-                        aMapLocation.getCountry();//国家信息
-                        aMapLocation.getProvince();//省信息
-                        aMapLocation.getCity();//城市信息
-                        aMapLocation.getDistrict();//城区信息
-                        aMapLocation.getStreet();//街道信息
-                        aMapLocation.getStreetNum();//街道门牌号信息
-                        aMapLocation.getCityCode();//城市编码
-                        aMapLocation.getAdCode();//地区编码
+
+                        try {
+                            JSONObject obj = new JSONObject();
+                            obj.put("lat", aMapLocation.getLatitude());
+                            obj.put("lng", aMapLocation.getLatitude());
+
+                            Log.d(TAG, obj.toString());
+                            UnityPlayer.UnitySendMessage("GameManager", "OnLocationUpdate", obj.toString());
+                        }
+                        catch (JSONException e) {
+
+                        }
                     } else {
                         //显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
                         Log.e("AmapError", "location Error, ErrCode:"
@@ -61,24 +95,16 @@ public class LocateService extends Service {
                     }
                 }
             }
-        };
-        mLocationClient = new AMapLocationClient(this);
-        mLocationClient.setLocationListener(mLocationListener);
+    }
 
+    private void SetLocateInterval(int interval) {
+        Log.d(TAG, "SetLocateInterval:"+Integer.toString(interval));
 
-        //声明mLocationOption对象
         AMapLocationClientOption mLocationOption = new AMapLocationClientOption();
         mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
         mLocationOption.setNeedAddress(false);
-        mLocationOption.setInterval(2000);
+        mLocationOption.setInterval(interval);
 
         mLocationClient.setLocationOption(mLocationOption);
-        mLocationClient.startLocation();
-    }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        mLocationClient.stopLocation();//停止定位
-        return super.onUnbind(intent);
     }
 }

@@ -10,6 +10,7 @@ import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -19,6 +20,8 @@ import android.view.WindowManager;
 public class UnityPlayerNativeActivity extends NativeActivity
 {
 	protected UnityPlayer mUnityPlayer;		// don't change the name of this variable; referenced from native code
+	private ServiceConnection mServiceConnection;
+
 
 	// Setup activity layout
 	@Override protected void onCreate (Bundle savedInstanceState)
@@ -33,8 +36,13 @@ public class UnityPlayerNativeActivity extends NativeActivity
 		setContentView(mUnityPlayer);
 		mUnityPlayer.requestFocus();
 
-		Intent locateService = new Intent();
-		this.bindService(locateService, new ServiceConnection() {
+		connectService();
+
+	}
+
+	private void connectService() {
+		//不需要IBinder去控制Service, 只
+		mServiceConnection = new ServiceConnection() {
 			@Override
 			public void onServiceConnected(ComponentName name, IBinder service) {
 
@@ -44,12 +52,23 @@ public class UnityPlayerNativeActivity extends NativeActivity
 			public void onServiceDisconnected(ComponentName name) {
 
 			}
-		}, Context.BIND_ADJUST_WITH_ACTIVITY);
+		};
+
+
+		Intent locateService = new Intent(this, LocateService.class);
+		this.startService(locateService);
+		this.bindService(locateService,mServiceConnection ,Context.BIND_IMPORTANT);
+
 	}
 
 	// Quit Unity
 	@Override protected void onDestroy ()
 	{
+		if(mServiceConnection != null) {
+			this.unbindService(mServiceConnection);
+			mServiceConnection = null;
+		}
+
 		mUnityPlayer.quit();
 		super.onDestroy();
 	}
