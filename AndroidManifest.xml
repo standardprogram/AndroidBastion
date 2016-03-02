@@ -42,8 +42,7 @@
                 android:value="false" />
         </activity>
         <service android:name="com.amap.api.location.APSService"></service>
-        <service android:name=".LocateService"
-            android:process=":remote"></service>
+        <service android:name=".LocateService"></service>
     </application>
     <uses-sdk
         android:minSdkVersion="14"

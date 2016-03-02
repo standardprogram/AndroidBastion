@@ -24,16 +24,19 @@ public class LocateService extends Service {
 
     private static final String TAG = "LocateService";
 
+
     private final int FAST_INTERVAL = 15 * 1000;
     private final int SLOW_INTERVAL = 3 * 60 * 1000;
 
-    public AMapLocationClient mLocationClient = null;
-    public AMapLocationListener mLocationListener;
+    private AMapLocationClient mLocationClient = null;
+    private AMapLocationListener mLocationListener;
 
+    private boolean hasBoundUnityActivity = false;
 
     @Override
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "onBind");
+        hasBoundUnityActivity = true;
         SetLocateInterval(FAST_INTERVAL);
         return null;
     }
@@ -41,19 +44,9 @@ public class LocateService extends Service {
     @Override
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnbind");
+        hasBoundUnityActivity = false;
         SetLocateInterval(SLOW_INTERVAL);
         return super.onUnbind(intent);
-    }
-
-
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-
-        Log.d(TAG, "onStartCommand");
-
-
-        return Service.START_STICKY;
     }
 
     @Override
@@ -66,6 +59,7 @@ public class LocateService extends Service {
         mLocationListener = new LocationListener();
         mLocationClient.setLocationListener(mLocationListener);
         SetLocateInterval(SLOW_INTERVAL);
+        hasBoundUnityActivity = false;
         mLocationClient.startLocation();
     }
 
@@ -79,10 +73,12 @@ public class LocateService extends Service {
                         try {
                             JSONObject obj = new JSONObject();
                             obj.put("lat", aMapLocation.getLatitude());
-                            obj.put("lng", aMapLocation.getLatitude());
+                            obj.put("lng", aMapLocation.getLongitude());
 
-                            Log.d(TAG, obj.toString());
-                            UnityPlayer.UnitySendMessage("GameManager", "OnLocationUpdate", obj.toString());
+                            if(hasBoundUnityActivity)
+                                UnityPlayer.UnitySendMessage("GameManager", "OnLocationUpdate", obj.toString());
+                            else
+                                Log.d("TODO update ", obj.toString());
                         }
                         catch (JSONException e) {
 
